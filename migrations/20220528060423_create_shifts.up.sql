@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS shifts (
+    id INT NOT NULL AUTO_INCREMENT,
+    room_id VARCHAR(500) NOT NULL,
+    sender TEXT NOT NULL,
+    holders VARCHAR (100),
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP NULL DEFAULT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (room_id) REFERENCES rooms(id)
+);
