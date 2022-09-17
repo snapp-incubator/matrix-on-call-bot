@@ -8,7 +8,7 @@ COPY go.mod go.sum Makefile /src/
 RUN make mod
 
 COPY . /src
-RUN make build-linux-http
+RUN make build-linux
 
 FROM debian:11.4-slim
 
