@@ -29,6 +29,8 @@ type Bot struct {
 	roomRepo     model.RoomRepo
 	shiftRepo    model.ShiftRepo
 	followUpRepo model.FollowUpRepo
+
+	stopSignal chan struct{}
 }
 
 func New(url, userID, token, displayName string,
@@ -47,6 +49,7 @@ func New(url, userID, token, displayName string,
 		roomRepo:     roomRepo,
 		shiftRepo:    shiftRepo,
 		followUpRepo: followUpRepo,
+		stopSignal:   make(chan struct{}, 1),
 	}, nil
 }
 
@@ -100,11 +103,24 @@ func (b *Bot) RegisterListeners() error {
 }
 
 func (b *Bot) Run() {
-	for {
-		if err := b.cli.Sync(); err != nil {
-			logrus.WithField("error", err.Error()).Error("sync failed")
-		}
+	ticker := time.NewTicker(ResyncWaitTime)
 
-		time.Sleep(ResyncWaitTime)
-	}
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if err := b.cli.Sync(); err != nil {
+					logrus.WithField("error", err.Error()).Error("sync failed")
+				}
+			case <-b.stopSignal:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+func (b *Bot) Stop() {
+	b.cli.StopSync()
+	b.stopSignal <- struct{}{}
 }
