@@ -6,6 +6,7 @@ import (
 
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/config"
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/database"
+	internalhttp "github.com/snapp-incubator/matrix-on-call-bot/internal/http"
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/matrix"
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/model"
 )
@@ -32,6 +33,10 @@ func main(cfg config.Config) {
 		logrus.WithField("error", err.Error()).Fatalf("couldn't register listeners")
 	}
 
+	logrus.Info("bot is started!")
+
+	s := internalhttp.NewServer()
+	go s.Run(cfg.Server.Listen)
 	logrus.Info("bot is started!")
 
 	bot.Run()

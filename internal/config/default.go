@@ -7,6 +7,9 @@ matrix:
   token: "secret"
   display-name: "user"
 
+server:
+  listen: "0.0.0.0:8080"
+
 database:
   driver: mysql
   conn-str: "on-call:secret@tcp(localhost:33060)/on-call?readTimeout=3s&timeout=30s&parseTime=True"

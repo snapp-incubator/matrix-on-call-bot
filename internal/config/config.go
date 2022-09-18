@@ -24,7 +24,12 @@ const (
 type (
 	Config struct {
 		Matrix   Matrix   `mapstructure:"matrix"`
+		Server   Server   `mapstructure:"server"`
 		Database Database `mapstructure:"database"`
+	}
+
+	Server struct {
+		Listen string `mapstructure:"listen"`
 	}
 
 	Matrix struct {
