@@ -10,6 +10,12 @@ run-server:
 build:
 	go build ./cmd/matrix-on-call-bot
 
+mod:
+	go mod download
+
+build-linux:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o matrix-on-call-bot ./cmd/matrix-on-call-bot
+
 install:
 	go install ./cmd/matrix-on-call-bot
 
