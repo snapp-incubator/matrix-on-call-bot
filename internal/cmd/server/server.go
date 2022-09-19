@@ -1,6 +1,10 @@
 package server
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -32,9 +36,23 @@ func main(cfg config.Config) {
 		logrus.WithField("error", err.Error()).Fatalf("couldn't register listeners")
 	}
 
-	logrus.Info("bot is started!")
+	s := make(chan os.Signal, 2)
+	// add any other syscalls that you want to be notified with
+	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
 
+	logrus.Info("bot is started!")
 	bot.Run()
+
+	<-s
+
+	logrus.Info("stopping bot loop!")
+	bot.Stop()
+
+	logrus.Info("closing DB connections!")
+	err = db.Close()
+	if err != nil {
+		logrus.WithError(err).Error("error in closing connection to database")
+	}
 }
 
 // Register registers server command for matrix-matrix-on-call-bot binary.
