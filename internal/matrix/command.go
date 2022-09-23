@@ -136,6 +136,7 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 	now := time.Now()
 
 	for _, mxid := range mxids {
+		// TODO: Create a bulk Create method
 		if err := b.shiftRepo.Create(&model.Shift{
 			RoomID:    event.RoomID,
 			Sender:    event.Sender,
