@@ -2,13 +2,13 @@ package matrix
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/matrix-org/gomatrix"
+	"github.com/pkg/errors"
 
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/model"
 )
@@ -23,7 +23,7 @@ const (
 	minCommandLength int  = 1
 
 	CreateShift          Head = "!startshift" // !startshift <comma separated oncall names>
-	minCreateShiftLength int  = 2
+	minCreateShiftLength int  = 1
 
 	EndShift          Head = "!endshift" // !endshift <shift id>
 	minEndShiftLength int  = 2
@@ -43,6 +43,10 @@ var (
 	ErrInvalidCommand = errors.New("invalid command")
 	ErrUnknownCommand = errors.New("unknown command")
 	ErrInvalidBody    = errors.New("invalid body")
+
+	// Regexp is a compiled regular expression that can extract data in a message containing people mentioning (like:
+	//@ahmad.anvari:snapp.cab)
+	Regexp = regexp.MustCompile(`<a href="https://matrix.to/#/(.*?)">(.*?)</a>`)
 )
 
 //nolint:cyclop
@@ -56,6 +60,10 @@ func (b *Bot) Handle(event *gomatrix.Event) error {
 
 	if len(parts) < minCommandLength {
 		return ErrInvalidCommand
+	}
+
+	if parts[0][0] != '!' {
+		return nil
 	}
 
 	switch Head(parts[0]) {
@@ -83,12 +91,41 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 		return ErrInvalidCommand
 	}
 
+	formattedBody, found := event.Content["formatted_body"]
+	if !found && len(parts) > 1 {
+		if _, err := b.cli.SendText(event.RoomID, InvalidShiftStart); err != nil {
+			return errors.Wrap(err, "error sending invalid shift start")
+		}
+	}
+
+	mxids := make([]string, 0)
+	names := make([]string, 0)
+	mentions := make([]string, 0)
+
+	if len(parts) == 1 {
+		mxids = append(mxids, event.Sender)
+		displayName, err := b.cli.GetDisplayName(event.Sender)
+		if err != nil {
+			return errors.Wrap(err, "error getting the display name of the event sender")
+		}
+		mentions = append(mentions, b.mentionedText(event.Sender, displayName.DisplayName))
+		names = append(names, displayName.DisplayName)
+	} else {
+		items := Regexp.FindAllStringSubmatch(formattedBody.(string), -1)
+		for _, parts := range items {
+			mentions = append(mentions, parts[0])
+			mxids = append(mxids, parts[1])
+			names = append(names, parts[2])
+		}
+	}
+
 	active, err := b.shiftRepo.Active(event.RoomID)
 	if err != nil {
 		return errors.Wrap(err, "error getting active shifts")
 	}
 
-	if len(active) > 0 {
+	// TODO: Check weather this condition should be checked or not
+	if len(active) > 2 {
 		if _, err := b.cli.SendText(event.RoomID, ActiveShiftOngoing); err != nil {
 			return errors.Wrap(err, "error sending active shift message")
 		}
@@ -98,18 +135,21 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 
 	now := time.Now()
 
-	if err := b.shiftRepo.Create(&model.Shift{
-		RoomID:    event.RoomID,
-		Sender:    event.Sender,
-		Holders:   parts[1],
-		StartTime: now,
-		EndTime:   nil,
-	}); err != nil {
-		return errors.Wrap(err, "error saving shift")
+	for _, mxid := range mxids {
+		if err := b.shiftRepo.Create(&model.Shift{
+			RoomID:    event.RoomID,
+			Sender:    event.Sender,
+			Holders:   mxid,
+			StartTime: now,
+			EndTime:   nil,
+		}); err != nil {
+			return errors.Wrap(err, "error saving shift")
+		}
 	}
 
-	_, err = b.cli.SendFormattedText(event.RoomID, "",
-		fmt.Sprintf(ShiftStarted, now.Local().Format(time.RFC850), b.commaSeparatedToList(parts[1])))
+	formattedTime := now.Local().Format(time.RFC850)
+	_, err = b.cli.SendFormattedText(event.RoomID, fmt.Sprintf(ShiftStarted, strings.Join(names, " "), formattedTime),
+		fmt.Sprintf(ShiftStarted, strings.Join(mentions, " "), formattedTime))
 	if err != nil {
 		return errors.Wrap(err, "error sending shift created message")
 	}
@@ -136,7 +176,8 @@ func (b *Bot) endShift(event *gomatrix.Event, parts []string) error {
 		return errors.Wrap(err, "error updating shift")
 	}
 
-	if _, err := b.cli.SendFormattedText(event.RoomID, "", fmt.Sprintf(ShiftEnd, shiftID)); err != nil {
+	_, err = b.cli.SendFormattedText(event.RoomID, fmt.Sprintf(ShiftEnd, shiftID), fmt.Sprintf(ShiftEndFormatted, shiftID))
+	if err != nil {
 		return errors.Wrap(err, "error sending shift end message")
 	}
 
@@ -160,8 +201,13 @@ func (b *Bot) listShifts(event *gomatrix.Event) error {
 			emoji = "⚪️"
 		}
 
+		displayName, err := b.cli.GetDisplayName(item.Holders)
+		if err != nil {
+			return errors.Wrap(err, "error getting the display name of the event sender")
+		}
+
 		message += fmt.Sprintf(ShiftItem, emoji,
-			item.StartTime.Local().Format(time.RFC850), end, b.commaSeparatedToList(item.Holders), item.ID)
+			item.StartTime.Local().Format(time.RFC850), end, b.mentionedText(item.Holders, displayName.DisplayName), item.ID)
 	}
 
 	message = fmt.Sprintf(ShiftList, message)
@@ -310,6 +356,10 @@ func (b *Bot) followUpCategory(in string) string {
 	default:
 		return incoming
 	}
+}
+
+func (b *Bot) mentionedText(id, name string) string {
+	return `<a href="https://matrix.to/#/` + id + `">` + name + `</a>`
 }
 
 func (b *Bot) commaSeparatedToList(in string) string {
