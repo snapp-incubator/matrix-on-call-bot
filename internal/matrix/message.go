@@ -2,10 +2,12 @@ package matrix
 
 //nolint:lll
 const (
-	ShiftStarted         = "Shift started at %s. Holders are <b>%s</b>."
+	ShiftStarted         = `%s shift started at %s.`
 	ShiftItem            = "<li>%s <b>Start time</b>: %s | <b>End time</b>: %s</li> | <b>Holders</b>: %s | <b>id</b>: %d"
 	ShiftList            = `<ol>%s</ol>`
-	ShiftEnd             = "Shift with id: <b>%d</b> ended. Good job! :)"
+	ShiftEndFormatted    = "Shift with id: <b>%d</b> ended. Good job! :)"
+	ShiftEnd             = "Shift with id %d ended."
+	InvalidShiftStart    = "Please mention the on call people."
 	ActiveShiftOngoing   = "There's an active shift still in progress. You can't start a new one."
 	NoActiveShiftOngoing = "There's no active shift. Create one first."
 	FollowUpCreated      = "Follow up created. List all follow ups with %s or mark this follow up as resolved by %s %d"
