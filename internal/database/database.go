@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"    // MySQL driver should have blank import
@@ -24,16 +25,16 @@ type Options struct {
 
 // Create creates a database connection.
 func Create(driver string, connStr string, options Options) (*gorm.DB, error) {
-	db, err := gorm.Open(driver, connStr)
+	database, err := gorm.Open(driver, connStr)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error opening connection to db")
 	}
 
-	db.DB().SetConnMaxLifetime(options.ConnectionLifetime)
-	db.DB().SetMaxOpenConns(options.MaxOpenConnections)
-	db.DB().SetMaxIdleConns(options.MaxIdleConnections)
+	database.DB().SetConnMaxLifetime(options.ConnectionLifetime)
+	database.DB().SetMaxOpenConns(options.MaxOpenConnections)
+	database.DB().SetMaxIdleConns(options.MaxIdleConnections)
 
-	return db, nil
+	return database, nil
 }
 
 // WithRetry provides functionality for having retry for connecting to database.

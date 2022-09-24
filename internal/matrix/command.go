@@ -43,9 +43,10 @@ var (
 	ErrInvalidCommand = errors.New("invalid command")
 	ErrUnknownCommand = errors.New("unknown command")
 	ErrInvalidBody    = errors.New("invalid body")
+	ErrInvalidType    = errors.New("invalid type")
 
 	// Regexp is a compiled regular expression that can extract data in a message containing people mentioning (like:
-	//@ahmad.anvari:snapp.cab)
+	// @ahmad.anvari:snapp.cab).
 	Regexp = regexp.MustCompile(`<a href="https://matrix.to/#/(.*?)">(.*?)</a>`)
 )
 
@@ -86,6 +87,7 @@ func (b *Bot) Handle(event *gomatrix.Event) error {
 	}
 }
 
+//nolint:funlen,cyclop
 func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 	if len(parts) < minCreateShiftLength {
 		return ErrInvalidCommand
@@ -104,14 +106,21 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 
 	if len(parts) == 1 {
 		mxids = append(mxids, event.Sender)
+
 		displayName, err := b.cli.GetDisplayName(event.Sender)
 		if err != nil {
 			return errors.Wrap(err, "error getting the display name of the event sender")
 		}
+
 		mentions = append(mentions, b.mentionedText(event.Sender, displayName.DisplayName))
 		names = append(names, displayName.DisplayName)
 	} else {
-		items := Regexp.FindAllStringSubmatch(formattedBody.(string), -1)
+		formattedBodyStr, ok := formattedBody.(string)
+		if !ok {
+			return errors.Wrap(ErrInvalidType, "error getting the display name of the event sender")
+		}
+
+		items := Regexp.FindAllStringSubmatch(formattedBodyStr, -1)
 		for _, parts := range items {
 			mentions = append(mentions, parts[0])
 			mxids = append(mxids, parts[1])
@@ -124,6 +133,7 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 		return errors.Wrap(err, "error getting active shifts")
 	}
 
+	//nolint:godox
 	// TODO: Check weather this condition should be checked or not
 	if len(active) > 0 {
 		if _, err := b.cli.SendText(event.RoomID, ActiveShiftOngoing); err != nil {
@@ -136,6 +146,7 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 	now := time.Now()
 
 	for _, mxid := range mxids {
+		//nolint:godox
 		// TODO: Create a bulk Create method
 		if err := b.shiftRepo.Create(&model.Shift{
 			RoomID:    event.RoomID,
@@ -149,6 +160,7 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 	}
 
 	formattedTime := now.Local().Format(time.RFC850)
+
 	_, err = b.cli.SendFormattedText(event.RoomID, fmt.Sprintf(ShiftStarted, strings.Join(names, " "), formattedTime),
 		fmt.Sprintf(ShiftStarted, strings.Join(mentions, " "), formattedTime))
 	if err != nil {
@@ -361,20 +373,4 @@ func (b *Bot) followUpCategory(in string) string {
 
 func (b *Bot) mentionedText(id, name string) string {
 	return `<a href="https://matrix.to/#/` + id + `">` + name + `</a>`
-}
-
-func (b *Bot) commaSeparatedToList(in string) string {
-	list := strings.Split(in, ",")
-
-	out := "["
-
-	for i := range list {
-		if i == len(list)-1 {
-			out += list[i]
-		} else {
-			out += list[i] + ", "
-		}
-	}
-
-	return out + "]"
 }

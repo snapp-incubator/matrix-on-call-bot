@@ -21,7 +21,7 @@ const (
 var ErrFlags = errors.New("error parsing flags")
 
 func main(path string, cfg config.Database) error {
-	db := database.WithRetry(
+	oncallDB := database.WithRetry(
 		database.Create,
 		cfg.Driver,
 		cfg.ConnStr,
@@ -29,12 +29,12 @@ func main(path string, cfg config.Database) error {
 	)
 
 	defer func() {
-		if err := db.Close(); err != nil {
+		if err := oncallDB.Close(); err != nil {
 			logrus.Errorf("db connection close error: %s", err.Error())
 		}
 	}()
 
-	driver, err := mysql.WithInstance(db.DB(), &mysql.Config{})
+	driver, err := mysql.WithInstance(oncallDB.DB(), &mysql.Config{})
 	if err != nil {
 		return errors.Wrap(err, "error creating driver")
 	}
