@@ -14,17 +14,19 @@ import (
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/model"
 )
 
+const sigChanSize = 2
+
 func main(cfg config.Config) {
-	db := database.WithRetry(
+	oncallDB := database.WithRetry(
 		database.Create,
 		cfg.Database.Driver,
 		cfg.Database.ConnStr,
 		cfg.Database.Options,
 	)
 
-	roomRepo := &model.SQLRoomRepo{DB: db}
-	shiftRepo := &model.SQLShiftRepo{DB: db}
-	followUpRepo := &model.SQLFollowUpRepo{DB: db}
+	roomRepo := &model.SQLRoomRepo{DB: oncallDB}
+	shiftRepo := &model.SQLShiftRepo{DB: oncallDB}
+	followUpRepo := &model.SQLFollowUpRepo{DB: oncallDB}
 
 	bot, err := matrix.New(cfg.Matrix.URL, cfg.Matrix.UserID, cfg.Matrix.Token,
 		cfg.Matrix.DisplayName, roomRepo, shiftRepo, followUpRepo)
@@ -36,21 +38,21 @@ func main(cfg config.Config) {
 		logrus.WithField("error", err.Error()).Fatalf("couldn't register listeners")
 	}
 
-	s := make(chan os.Signal, 2)
+	sigChan := make(chan os.Signal, sigChanSize)
 	// add any other syscalls that you want to be notified with
-	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	logrus.Info("bot is started!")
 	bot.Run()
 
-	<-s
+	<-sigChan
 
 	logrus.Info("stopping bot loop!")
 	bot.Stop()
 
 	logrus.Info("closing DB connections!")
-	err = db.Close()
-	if err != nil {
+
+	if err := oncallDB.Close(); err != nil {
 		logrus.WithError(err).Error("error in closing connection to database")
 	}
 }

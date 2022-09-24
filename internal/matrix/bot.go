@@ -114,6 +114,7 @@ func (b *Bot) Run() {
 				}
 			case <-b.stopSignal:
 				ticker.Stop()
+
 				return
 			}
 		}

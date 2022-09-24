@@ -61,6 +61,7 @@ func Init() Config {
 
 // read initializes a config struct using default, file, and environment variables.
 func read(app string, file string, cfg interface{}, defaultConfig string, prefix string) interface{} {
+	//nolint:varnamelen
 	v := viper.New()
 	v.SetConfigType("yaml")
 
@@ -76,6 +77,7 @@ func read(app string, file string, cfg interface{}, defaultConfig string, prefix
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
 
+	//nolint:errorlint
 	switch err := v.MergeInConfig(); err.(type) {
 	case nil:
 	case *os.PathError:
