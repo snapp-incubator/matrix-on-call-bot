@@ -125,7 +125,7 @@ func (b *Bot) createShift(event *gomatrix.Event, parts []string) error {
 	}
 
 	// TODO: Check weather this condition should be checked or not
-	if len(active) > 2 {
+	if len(active) > 0 {
 		if _, err := b.cli.SendText(event.RoomID, ActiveShiftOngoing); err != nil {
 			return errors.Wrap(err, "error sending active shift message")
 		}
