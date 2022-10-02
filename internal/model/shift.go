@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type Shift struct {
@@ -31,7 +31,7 @@ func (ss *SQLShiftRepo) Create(s *Shift) error {
 }
 
 func (ss *SQLShiftRepo) Update(s *Shift) error {
-	return ss.DB.Model(s).Where("end_time is null").Update(&Shift{EndTime: s.EndTime}).Error
+	return ss.DB.Model(s).Where("end_time is null").Updates(&Shift{EndTime: s.EndTime}).Error
 }
 
 func (ss *SQLShiftRepo) Get(roomID string) ([]Shift, error) {
