@@ -1,14 +1,13 @@
 package database
 
 import (
+	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	_ "github.com/jinzhu/gorm/dialects/mysql"    // MySQL driver should have blank import
-	_ "github.com/jinzhu/gorm/dialects/postgres" // PostgreSQL driver should have blank import
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 const (
@@ -25,14 +24,32 @@ type Options struct {
 
 // Create creates a database connection.
 func Create(driver string, connStr string, options Options) (*gorm.DB, error) {
-	database, err := gorm.Open(driver, connStr)
+	var dialect gorm.Dialector
+
+	switch strings.ToLower(driver) {
+	case "mysql":
+		dialect = mysql.Open(connStr)
+	//nolint:godox
+	// TODO: As our migrations are not Postgresql compatible, we don't support postgres for now.
+	// case "postgres", "postgresql":
+	//	dialect = postgres.Open(connStr)
+	default:
+		return nil, errors.New("unknown database driver")
+	}
+
+	database, err := gorm.Open(dialect, &gorm.Config{})
 	if err != nil {
 		return nil, errors.Wrap(err, "error opening connection to db")
 	}
 
-	database.DB().SetConnMaxLifetime(options.ConnectionLifetime)
-	database.DB().SetMaxOpenConns(options.MaxOpenConnections)
-	database.DB().SetMaxIdleConns(options.MaxIdleConnections)
+	sqlDB, err := database.DB()
+	if err != nil {
+		return nil, errors.Wrap(err, "error in accessing sql DB instance")
+	}
+
+	sqlDB.SetConnMaxLifetime(options.ConnectionLifetime)
+	sqlDB.SetMaxOpenConns(options.MaxOpenConnections)
+	sqlDB.SetMaxIdleConns(options.MaxIdleConnections)
 
 	return database, nil
 }

@@ -28,13 +28,18 @@ func main(path string, cfg config.Database) error {
 		cfg.Options,
 	)
 
+	sqlDB, err := oncallDB.DB()
+	if err != nil {
+		logrus.WithError(err).Fatal("error in accessing sql DB instance")
+	}
+
 	defer func() {
-		if err := oncallDB.Close(); err != nil {
+		if err := sqlDB.Close(); err != nil {
 			logrus.Errorf("db connection close error: %s", err.Error())
 		}
 	}()
 
-	driver, err := mysql.WithInstance(oncallDB.DB(), &mysql.Config{})
+	driver, err := mysql.WithInstance(sqlDB, &mysql.Config{})
 	if err != nil {
 		return errors.Wrap(err, "error creating driver")
 	}

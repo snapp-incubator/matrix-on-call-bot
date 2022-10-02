@@ -52,7 +52,12 @@ func main(cfg config.Config) {
 
 	logrus.Info("closing DB connections!")
 
-	if err := oncallDB.Close(); err != nil {
+	sqlDB, err := oncallDB.DB()
+	if err != nil {
+		logrus.WithError(err).Fatal("error in accessing sql DB instance")
+	}
+
+	if err := sqlDB.Close(); err != nil {
 		logrus.WithError(err).Error("error in closing connection to database")
 	}
 }

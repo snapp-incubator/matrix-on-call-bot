@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type FollowUp struct {
@@ -44,5 +44,5 @@ func (fu *SQLFollowUpRepo) Get(shiftID int) ([]FollowUp, error) {
 }
 
 func (fu *SQLFollowUpRepo) Update(f *FollowUp) error {
-	return fu.DB.Model(f).Update(&FollowUp{Done: f.Done}).Error
+	return fu.DB.Model(f).Updates(&FollowUp{Done: f.Done}).Error
 }

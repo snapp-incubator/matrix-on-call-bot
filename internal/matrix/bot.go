@@ -66,7 +66,7 @@ func (b *Bot) RegisterListeners() error {
 			return
 		}
 
-		// nolint:nestif
+		//nolint:nestif
 		if val, ok := event.Content["membership"]; ok {
 			if membership, ok := val.(string); ok && membership == "invite" {
 				if err := b.roomRepo.Create(&model.Room{

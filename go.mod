@@ -5,13 +5,14 @@ go 1.18
 require (
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/golang-migrate/migrate/v4 v4.15.1
-	github.com/jinzhu/gorm v1.9.16
 	github.com/matrix-org/gomatrix v0.0.0-20210324163249-be2af5ef2e16
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1
 	go.uber.org/automaxprocs v1.5.1
+	gorm.io/driver/mysql v1.3.6
+	gorm.io/gorm v1.23.8
 )
 
 require (
@@ -36,6 +37,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lib/pq v1.10.4 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
