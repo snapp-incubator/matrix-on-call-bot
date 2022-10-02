@@ -1,14 +1,12 @@
 package database
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
-	// "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -31,11 +29,12 @@ func Create(driver string, connStr string, options Options) (*gorm.DB, error) {
 	switch strings.ToLower(driver) {
 	case "mysql":
 		dialect = mysql.Open(connStr)
+	//nolint:godox
 	// TODO: As our migrations are not Postgresql compatible, we don't support postgres for now.
-	//case "postgres", "postgresql":
+	// case "postgres", "postgresql":
 	//	dialect = postgres.Open(connStr)
 	default:
-		return nil, fmt.Errorf("uknown database driver `%s`", driver)
+		return nil, errors.New("unknown database driver")
 	}
 
 	database, err := gorm.Open(dialect, &gorm.Config{})

@@ -27,6 +27,7 @@ func main(path string, cfg config.Database) error {
 		cfg.ConnStr,
 		cfg.Options,
 	)
+
 	sqlDB, err := oncallDB.DB()
 	if err != nil {
 		logrus.WithError(err).Fatal("error in accessing sql DB instance")
