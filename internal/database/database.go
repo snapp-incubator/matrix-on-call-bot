@@ -31,6 +31,7 @@ func Create(driver string, connStr string, options Options) (*gorm.DB, error) {
 	switch strings.ToLower(driver) {
 	case "mysql":
 		dialect = mysql.Open(connStr)
+	// TODO: As our migrations are not Postgresql compatible, we don't support postgres for now.
 	//case "postgres", "postgresql":
 	//	dialect = postgres.Open(connStr)
 	default:
