@@ -1,6 +1,7 @@
 package matrix
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -35,6 +36,8 @@ const (
 
 	ResolveFollowUp          Head = "!resolvefollowup" // !resolvefollowup <id>
 	minResolveFollowUpLength int  = 2
+
+	Report Head = "!report" // !report
 
 	Help = "!help" // !help
 )
@@ -80,6 +83,8 @@ func (b *Bot) Handle(event *gomatrix.Event) error {
 		return b.listFollowUps(event)
 	case ResolveFollowUp:
 		return b.resolveFollowUp(event, parts)
+	case Report:
+		return b.report(event)
 	case Help:
 		return b.help(event)
 	default:
@@ -373,4 +378,48 @@ func (b *Bot) followUpCategory(in string) string {
 
 func (b *Bot) mentionedText(id, name string) string {
 	return `<a href="https://matrix.to/#/` + id + `">` + name + `</a>`
+}
+
+type ShiftReportTemplate struct {
+	HolderID   string
+	WorkingDay int
+	Holiday    int
+}
+
+func (b *Bot) report(event *gomatrix.Event) error {
+	now := time.Now()
+	minStartTime := time.Date(now.Year(), now.Month(), 0, 0, 0, 0, 0, time.Local)
+
+	shifts, err := b.shiftRepo.Report(event.RoomID, minStartTime)
+	if err != nil {
+		return errors.Wrap(err, "error in getting shifts from the db")
+	}
+
+	shiftsRep := make([]ShiftReportTemplate, 0, len(shifts))
+
+	for _, shift := range shifts {
+		displayName, err := b.cli.GetDisplayName(shift.Holders)
+		if err != nil {
+			return errors.Wrap(err, "error getting the display name of the event sender")
+		}
+
+		shiftsRep = append(shiftsRep, ShiftReportTemplate{
+			HolderID:   b.mentionedText(shift.Holders, displayName.DisplayName),
+			WorkingDay: shift.Days,
+			Holiday:    0,
+		})
+	}
+
+	var buf bytes.Buffer
+
+	err = reportTemplate.Execute(&buf, shiftsRep)
+	if err != nil {
+		return errors.Wrap(err, "error in executing the template with parameter")
+	}
+
+	if _, err := b.cli.SendFormattedText(event.RoomID, "monthly report", buf.String()); err != nil {
+		return errors.Wrap(err, "error in sending monthly report")
+	}
+
+	return nil
 }

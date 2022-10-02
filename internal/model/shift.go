@@ -20,6 +20,7 @@ type ShiftRepo interface {
 	Get(roomID string) ([]Shift, error)
 	Update(s *Shift) error
 	Active(RoomID string) ([]Shift, error)
+	Report(RoomID string, minStartTime time.Time) ([]ShiftReport, error)
 }
 
 type SQLShiftRepo struct {
@@ -46,6 +47,25 @@ func (ss *SQLShiftRepo) Active(roomID string) ([]Shift, error) {
 	var res []Shift
 
 	err := ss.DB.Where("room_id = ? AND end_time is null", roomID).Find(&res).Error
+
+	return res, err
+}
+
+type ShiftReport struct {
+	Holders string
+	Days    int
+}
+
+func (ss *SQLShiftRepo) Report(roomID string, minStartTime time.Time) ([]ShiftReport, error) {
+	var res []ShiftReport
+
+	err := ss.DB.Table("shifts").
+		Select("holders, sum(datediff(end_time, start_time)) as days").
+		Where("start_time > ?", minStartTime).
+		Where("room_id", roomID).
+		Group("holders").
+		Find(&res).
+		Error
 
 	return res, err
 }

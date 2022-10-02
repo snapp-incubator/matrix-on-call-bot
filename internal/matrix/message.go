@@ -1,5 +1,12 @@
 package matrix
 
+import (
+	"text/template"
+)
+
+//nolint:gochecknoglobals
+var reportTemplate = template.Must(template.New("tmpl").Parse(ReportMessage))
+
 //nolint:lll
 const (
 	ShiftStarted         = `%s shift started at %s.`
@@ -28,6 +35,18 @@ const (
 <li>!followup &lt;category: incoming|outgoing&gt; &lt;initiator&gt; &lt;description&gt; <b>=&gt;</b> create a new follow up</li>
 <li>!listfollowups <b>=&gt;</b> list all follow ups</li>
 <li>!resolvefollowup <id> <b>=&gt;</b> resolve a follow up</li>
+</ul>
+`
+	ReportMessage = `
+<ul>
+{{range $item := .}}
+    <li> {{$item.HolderID}}
+		<ul>
+			<li>Working day: {{$item.WorkingDay}}</li>
+			<li>Holiday: {{$item.Holiday}}</li>
+		</ul>
+	</li>
+{{end}}
 </ul>
 `
 )
