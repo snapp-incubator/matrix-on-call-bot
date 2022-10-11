@@ -389,7 +389,7 @@ type ShiftReportTemplate struct {
 
 func (b *Bot) report(event *gomatrix.Event) error {
 	now := time.Now()
-	minStartTime := time.Date(now.Year(), now.Month()-1, 0, 0, 0, 0, 0, time.Local)
+	minStartTime := time.Date(now.Year(), now.Month(), 0, 0, 0, 0, 0, time.Local)
 
 	shifts, err := b.shiftRepo.Report(event.RoomID, minStartTime)
 	if err != nil {
