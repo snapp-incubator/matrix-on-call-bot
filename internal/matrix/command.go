@@ -404,7 +404,7 @@ func (b *Bot) report(event *gomatrix.Event) error {
 		var ok bool
 
 		if t, ok = results[shift.Holders]; !ok {
-			results[shift.Holders] = ShiftReportTemplate{
+			t = ShiftReportTemplate{
 				HolderID:   shift.Holders,
 				WorkingDay: 0,
 				Holiday:    0,
