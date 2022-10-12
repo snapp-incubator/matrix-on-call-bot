@@ -3,6 +3,7 @@ package matrix
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -396,17 +397,37 @@ func (b *Bot) report(event *gomatrix.Event) error {
 	}
 
 	shiftsRep := make([]ShiftReportTemplate, 0, len(shifts))
+	results := make(map[string]ShiftReportTemplate)
 
 	for _, shift := range shifts {
-		displayName, err := b.cli.GetDisplayName(shift.Holders)
+		var temp ShiftReportTemplate
+
+		var ok bool
+
+		if temp, ok = results[shift.Holders]; !ok {
+			temp = ShiftReportTemplate{
+				HolderID:   shift.Holders,
+				WorkingDay: 0,
+				Holiday:    0,
+			}
+		}
+
+		wd, hd := dateDiff(shift.StartTime, shift.EndTime)
+		temp.WorkingDay += wd
+		temp.Holiday += hd
+		results[shift.Holders] = temp
+	}
+
+	for _, result := range results {
+		displayName, err := b.cli.GetDisplayName(result.HolderID)
 		if err != nil {
 			return errors.Wrap(err, "error getting the display name of the event sender")
 		}
 
 		shiftsRep = append(shiftsRep, ShiftReportTemplate{
-			HolderID:   b.mentionedText(shift.Holders, displayName.DisplayName),
-			WorkingDay: shift.Days,
-			Holiday:    0,
+			HolderID:   b.mentionedText(result.HolderID, displayName.DisplayName),
+			WorkingDay: result.WorkingDay,
+			Holiday:    result.Holiday,
 		})
 	}
 
@@ -422,4 +443,47 @@ func (b *Bot) report(event *gomatrix.Event) error {
 	}
 
 	return nil
+}
+
+const (
+	weekDays = 7
+	dayHours = 24
+)
+
+func dateDiff(start, end time.Time) (int, int) {
+	var normalDays, holidays int
+	// List of days those are holidays during the week. For example Thursday and Friday is holiday in my country
+	weekHolidays := []time.Weekday{
+		time.Thursday,
+		time.Friday,
+	}
+
+	// Calculate number of days between start and end
+	diffDays := end.Sub(start).Hours()/dayHours + 1
+	// Calculate number of complete weeks between start and end
+	fullWeeks := math.Floor(diffDays / weekDays)
+
+	// Each full weeks have the number holidays during it
+	fullWeeksHolidays := int(fullWeeks) * len(weekHolidays)
+
+	if uint(diffDays)%weekDays == 0 {
+		holidays = fullWeeksHolidays
+	} else {
+		// nEnd is the end of the last full week
+		nEnd := start.Add(time.Duration(fullWeeks) * weekDays * dayHours * time.Hour)
+		counter := 0
+
+		// Calculate number of holidays during nEnd to end
+		for _, weekHolidayDay := range weekHolidays {
+			if nEnd.Weekday() <= weekHolidayDay && end.Weekday() >= weekHolidayDay {
+				counter++
+			}
+		}
+
+		holidays = fullWeeksHolidays + counter
+	}
+
+	normalDays = int(diffDays) - holidays
+
+	return normalDays, holidays
 }

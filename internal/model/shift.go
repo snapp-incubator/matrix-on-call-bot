@@ -52,18 +52,19 @@ func (ss *SQLShiftRepo) Active(roomID string) ([]Shift, error) {
 }
 
 type ShiftReport struct {
-	Holders string
-	Days    int
+	Holders   string
+	StartTime time.Time
+	EndTime   time.Time
 }
 
 func (ss *SQLShiftRepo) Report(roomID string, minStartTime time.Time) ([]ShiftReport, error) {
 	var res []ShiftReport
 
 	err := ss.DB.Table("shifts").
-		Select("holders, sum(datediff(end_time, start_time)) as days").
+		Select("holders", "start_time", "end_time").
 		Where("start_time > ?", minStartTime).
+		Where("end_time is not null").
 		Where("room_id", roomID).
-		Group("holders").
 		Find(&res).
 		Error
 
