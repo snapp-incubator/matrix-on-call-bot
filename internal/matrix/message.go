@@ -50,4 +50,6 @@ const (
 {{end}}
 </ul>
 `
+	InvalidReportCommand          = "Invalid report command"
+	InvalidReportCommandWithError = "Invalid report command (%s)"
 )
