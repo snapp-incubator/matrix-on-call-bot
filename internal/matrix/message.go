@@ -39,8 +39,9 @@ const (
 </ul>
 `
 	ReportMessage = `
+<p>From {{.From}} - To {{.To}}</p>
 <ul>
-{{range $item := .}}
+{{range $item := .Items}}
     <li> {{$item.HolderID}}
 		<ul>
 			<li>Working day: {{$item.WorkingDay}}</li>

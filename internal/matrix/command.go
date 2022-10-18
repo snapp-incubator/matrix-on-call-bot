@@ -382,6 +382,12 @@ func (b *Bot) mentionedText(id, name string) string {
 }
 
 type ShiftReportTemplate struct {
+	Items []ShiftReportItemTemplate
+	From  string
+	To    string
+}
+
+type ShiftReportItemTemplate struct {
 	HolderID   string
 	WorkingDay int
 	Holiday    int
@@ -442,16 +448,16 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 		return errors.Wrap(err, "error in getting shifts from the db")
 	}
 
-	shiftsRep := make([]ShiftReportTemplate, 0, len(shifts))
-	results := make(map[string]ShiftReportTemplate)
+	shiftsRep := make([]ShiftReportItemTemplate, 0, len(shifts))
+	results := make(map[string]ShiftReportItemTemplate)
 
 	for _, shift := range shifts {
-		var temp ShiftReportTemplate
+		var temp ShiftReportItemTemplate
 
 		var ok bool
 
 		if temp, ok = results[shift.Holders]; !ok {
-			temp = ShiftReportTemplate{
+			temp = ShiftReportItemTemplate{
 				HolderID:   shift.Holders,
 				WorkingDay: 0,
 				Holiday:    0,
@@ -486,16 +492,21 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 			return errors.Wrap(err, "error getting the display name of the event sender")
 		}
 
-		shiftsRep = append(shiftsRep, ShiftReportTemplate{
+		shiftsRep = append(shiftsRep, ShiftReportItemTemplate{
 			HolderID:   b.mentionedText(result.HolderID, displayName.DisplayName),
 			WorkingDay: result.WorkingDay,
 			Holiday:    result.Holiday,
 		})
 	}
 
+	tmp := ShiftReportTemplate{
+		Items: shiftsRep,
+		From:  from.Format(time.Stamp),
+		To:    to.Format(time.Stamp),
+	}
 	var buf bytes.Buffer
 
-	err = reportTemplate.Execute(&buf, shiftsRep)
+	err = reportTemplate.Execute(&buf, tmp)
 	if err != nil {
 		return errors.Wrap(err, "error in executing the template with parameter")
 	}
