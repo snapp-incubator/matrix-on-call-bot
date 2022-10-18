@@ -20,7 +20,7 @@ type ShiftRepo interface {
 	Get(roomID string) ([]Shift, error)
 	Update(s *Shift) error
 	Active(RoomID string) ([]Shift, error)
-	Report(RoomID string, from time.Time) ([]ShiftReport, error)
+	Report(RoomID string, from time.Time, to time.Time) ([]ShiftReport, error)
 }
 
 type SQLShiftRepo struct {
@@ -57,13 +57,21 @@ type ShiftReport struct {
 	EndTime   *time.Time
 }
 
-func (ss *SQLShiftRepo) Report(roomID string, from time.Time) ([]ShiftReport, error) {
+func (ss *SQLShiftRepo) Report(roomID string, from time.Time, to time.Time) ([]ShiftReport, error) {
 	var res []ShiftReport
 
 	err := ss.DB.Table("shifts").
 		Select("holders", "start_time", "end_time").
 		Where("room_id", roomID).
-		Where("start_time > ? OR end_time > ? OR end_time IS NULL", from, from).
+		Where("((start_time < ?) AND (end_time >= ?) AND (end_time <= ?) ) OR "+
+			"((start_time >= ?) AND (start_time <= ?) AND (end_time >= ?) AND (end_time <= ?) ) OR "+
+			"((start_time >= ?) AND (start_time <= ?) AND (end_time > ?)) OR "+
+			"(end_time IS NULL AND start_time < ?)",
+			from, from, to,
+			from, to, from, to,
+			from, to, to,
+			to,
+		).
 		Find(&res).
 		Error
 

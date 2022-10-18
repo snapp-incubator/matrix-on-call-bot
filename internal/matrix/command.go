@@ -431,7 +431,7 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 		return nil
 	}
 
-	shifts, err := b.shiftRepo.Report(event.RoomID, from)
+	shifts, err := b.shiftRepo.Report(event.RoomID, from, to)
 	if err != nil {
 		return errors.Wrap(err, "error in getting shifts from the db")
 	}
@@ -454,7 +454,9 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 
 		if shift.EndTime == nil {
 			shift.EndTime = &to
-		} else if from.After(shift.StartTime) && to.After(*shift.EndTime) {
+		}
+
+		if from.After(shift.StartTime) && to.After(*shift.EndTime) {
 			shift.StartTime = from
 		} else if from.After(shift.StartTime) && to.Before(*shift.EndTime) {
 			shift.StartTime = from
