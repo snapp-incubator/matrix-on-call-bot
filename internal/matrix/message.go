@@ -35,7 +35,7 @@ const (
 <li>!followup &lt;category: incoming|outgoing&gt; &lt;initiator&gt; &lt;description&gt; <b>=&gt;</b> create a new follow up</li>
 <li>!listfollowups <b>=&gt;</b> list all follow ups</li>
 <li>!resolvefollowup <id> <b>=&gt;</b> resolve a follow up</li>
-<li>!report<b>=&gt;</b> Report current room on-call days for this month</li>
+<li>!report<b>=&gt;</b> Report current room on-call days for this month or within a custom time range</li>
 </ul>
 `
 	ReportMessage = `
