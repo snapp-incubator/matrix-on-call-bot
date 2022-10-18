@@ -4,4 +4,4 @@ linters:
     - gci
     - exhaustivestruct
     - exhaustruct
-
+    - nolintlint

@@ -387,16 +387,21 @@ type ShiftReportTemplate struct {
 	Holiday    int
 }
 
+// nolint: funlen,gocognit, cyclop
 func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 	// Handling custom time range report
+	//nolint: varnamelen
 	var from, to time.Time
+
 	var err error
 
-	if len(parts) == 1 { // ["!report"]
+	switch {
+	case len(parts) == 1: // ["!report"]
 		to = time.Now()
 		from = time.Date(to.Year(), to.Month(), 0, 0, 0, 0, 0, time.Local)
-	} else if len(parts) == 3 && strings.EqualFold(parts[1], "from") { // ["!report", "FROM", "2022-10-17"]
+	case len(parts) == 3 && strings.EqualFold(parts[1], "from"): // ["!report", "FROM", "2022-10-17"]
 		to = time.Now()
+
 		from, err = time.Parse(time.RFC3339, parts[2]+"T00:00:00Z")
 		if err != nil {
 			if _, err = b.cli.SendText(event.RoomID, fmt.Sprintf(InvalidReportCommandWithError, err.Error())); err != nil {
@@ -405,7 +410,8 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 
 			return nil
 		}
-	} else if len(parts) == 5 && strings.EqualFold(parts[1], "from") && strings.EqualFold(parts[3], "to") { // ["!report", "FROM", "2022-10-17", "TO", "2022-10-21"]
+	case len(parts) == 5 && strings.EqualFold(parts[1], "from") &&
+		strings.EqualFold(parts[3], "to"): // ["!report", "FROM", "2022-10-17", "TO", "2022-10-21"]
 		from, err = time.Parse(time.RFC3339, parts[2]+"T00:00:00Z")
 		if err != nil {
 			if _, err = b.cli.SendText(event.RoomID, fmt.Sprintf(InvalidReportCommandWithError, err.Error())); err != nil {
@@ -423,7 +429,7 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 
 			return nil
 		}
-	} else { // Not valid format
+	default: // Not valid format
 		if _, err = b.cli.SendText(event.RoomID, InvalidReportCommand); err != nil {
 			return errors.Wrap(err, "error sending invalid report command message")
 		}
@@ -456,12 +462,13 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 			shift.EndTime = &to
 		}
 
-		if from.After(shift.StartTime) && to.After(*shift.EndTime) {
+		switch {
+		case from.After(shift.StartTime) && to.After(*shift.EndTime):
 			shift.StartTime = from
-		} else if from.After(shift.StartTime) && to.Before(*shift.EndTime) {
+		case from.After(shift.StartTime) && to.Before(*shift.EndTime):
 			shift.StartTime = from
 			shift.EndTime = &to
-		} else if from.Before(shift.StartTime) && to.Before(*shift.EndTime) {
+		case from.Before(shift.StartTime) && to.Before(*shift.EndTime):
 			shift.EndTime = &to
 		} /* else if from.Before(shift.StartTime) && to.After(*shift.EndTime) {
 			// There's nothing to do here. It is written just for better understanding

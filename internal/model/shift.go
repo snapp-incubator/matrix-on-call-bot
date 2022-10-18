@@ -57,6 +57,7 @@ type ShiftReport struct {
 	EndTime   *time.Time
 }
 
+// nolint: varnamelen
 func (ss *SQLShiftRepo) Report(roomID string, from time.Time, to time.Time) ([]ShiftReport, error) {
 	var res []ShiftReport
 
