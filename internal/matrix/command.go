@@ -504,6 +504,7 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 		From:  from.Format(time.Stamp),
 		To:    to.Format(time.Stamp),
 	}
+
 	var buf bytes.Buffer
 
 	err = reportTemplate.Execute(&buf, tmp)
