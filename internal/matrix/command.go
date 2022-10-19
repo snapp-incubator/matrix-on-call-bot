@@ -404,7 +404,7 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 	switch {
 	case len(parts) == 1: // ["!report"]
 		to = time.Now()
-		from = time.Date(to.Year(), to.Month(), 0, 0, 0, 0, 0, time.Local)
+		from = time.Date(to.Year(), to.Month(), 1, 0, 0, 0, 0, time.Local)
 	case len(parts) == 3 && strings.EqualFold(parts[1], "from"): // ["!report", "FROM", "2022-10-17"]
 		to = time.Now()
 
