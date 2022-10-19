@@ -468,17 +468,13 @@ func (b *Bot) report(event *gomatrix.Event, parts []string) error {
 			shift.EndTime = &to
 		}
 
-		switch {
-		case from.After(shift.StartTime) && to.After(*shift.EndTime):
+		if from.After(shift.StartTime) {
 			shift.StartTime = from
-		case from.After(shift.StartTime) && to.Before(*shift.EndTime):
-			shift.StartTime = from
+		}
+
+		if to.Before(*shift.EndTime) {
 			shift.EndTime = &to
-		case from.Before(shift.StartTime) && to.Before(*shift.EndTime):
-			shift.EndTime = &to
-		} /* else if from.Before(shift.StartTime) && to.After(*shift.EndTime) {
-			// There's nothing to do here. It is written just for better understanding
-		} */
+		}
 
 		wd, hd := dateDiff(shift.StartTime, *shift.EndTime)
 		temp.WorkingDay += wd
