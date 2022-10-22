@@ -35,12 +35,13 @@ const (
 <li>!followup &lt;category: incoming|outgoing&gt; &lt;initiator&gt; &lt;description&gt; <b>=&gt;</b> create a new follow up</li>
 <li>!listfollowups <b>=&gt;</b> list all follow ups</li>
 <li>!resolvefollowup <id> <b>=&gt;</b> resolve a follow up</li>
-<li>!report<b>=&gt;</b> Report current room on-call days for this month</li>
+<li>!report<b>=&gt;</b> Report current room on-call days for this month or within a custom time range</li>
 </ul>
 `
 	ReportMessage = `
+<p>From {{.From}} - To {{.To}}</p>
 <ul>
-{{range $item := .}}
+{{range $item := .Items}}
     <li> {{$item.HolderID}}
 		<ul>
 			<li>Working day: {{$item.WorkingDay}}</li>
@@ -50,4 +51,6 @@ const (
 {{end}}
 </ul>
 `
+	InvalidReportCommand          = "Invalid report command"
+	InvalidReportCommandWithError = "Invalid report command (%s)"
 )

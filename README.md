@@ -14,4 +14,4 @@ Just add the bot to a group and start using it by its commands.
 | !followup [category: incoming/outgoing] [initiator] [description] | create a new follow up                                                                                    |
 | !listfollowups                                                    | list all follow ups                                                                                       |
 | !resolvefollowup [id]                                             | resolve a follow up                                                                                       |
-| !report                                                           | Report this month shifts                                                                                  |
+| !report [From yyyy-mm-dd] [FROM yyyy-mm-dd TO yyyy-mm-dd]         | Report this month shifts or custom time range values                                                      |

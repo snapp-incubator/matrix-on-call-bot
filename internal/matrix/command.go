@@ -85,7 +85,7 @@ func (b *Bot) Handle(event *gomatrix.Event) error {
 	case ResolveFollowUp:
 		return b.resolveFollowUp(event, parts)
 	case Report:
-		return b.report(event)
+		return b.report(event, parts)
 	case Help:
 		return b.help(event)
 	default:
@@ -382,37 +382,101 @@ func (b *Bot) mentionedText(id, name string) string {
 }
 
 type ShiftReportTemplate struct {
+	Items []ShiftReportItemTemplate
+	From  string
+	To    string
+}
+
+type ShiftReportItemTemplate struct {
 	HolderID   string
 	WorkingDay int
 	Holiday    int
 }
 
-func (b *Bot) report(event *gomatrix.Event) error {
-	now := time.Now()
-	minStartTime := time.Date(now.Year(), now.Month(), 0, 0, 0, 0, 0, time.Local)
+// nolint: funlen,gocognit, cyclop
+func (b *Bot) report(event *gomatrix.Event, parts []string) error {
+	// Handling custom time range report
+	//nolint: varnamelen
+	var from, to time.Time
 
-	shifts, err := b.shiftRepo.Report(event.RoomID, minStartTime)
+	var err error
+
+	switch {
+	case len(parts) == 1: // ["!report"]
+		to = time.Now()
+		from = time.Date(to.Year(), to.Month(), 1, 0, 0, 0, 0, time.Local)
+	case len(parts) == 3 && strings.EqualFold(parts[1], "from"): // ["!report", "FROM", "2022-10-17"]
+		to = time.Now()
+
+		from, err = time.Parse(time.RFC3339, parts[2]+"T00:00:00Z")
+		if err != nil {
+			if _, err = b.cli.SendText(event.RoomID, fmt.Sprintf(InvalidReportCommandWithError, err.Error())); err != nil {
+				return errors.Wrap(err, "error sending invalid report command message")
+			}
+
+			return nil
+		}
+	case len(parts) == 5 && strings.EqualFold(parts[1], "from") &&
+		strings.EqualFold(parts[3], "to"): // ["!report", "FROM", "2022-10-17", "TO", "2022-10-21"]
+		from, err = time.Parse(time.RFC3339, parts[2]+"T00:00:00Z")
+		if err != nil {
+			if _, err = b.cli.SendText(event.RoomID, fmt.Sprintf(InvalidReportCommandWithError, err.Error())); err != nil {
+				return errors.Wrap(err, "error sending invalid report command message")
+			}
+
+			return nil
+		}
+
+		to, err = time.Parse(time.RFC3339, parts[4]+"T00:00:00Z")
+		if err != nil {
+			if _, err = b.cli.SendText(event.RoomID, fmt.Sprintf(InvalidReportCommandWithError, err.Error())); err != nil {
+				return errors.Wrap(err, "error sending invalid report command message")
+			}
+
+			return nil
+		}
+	default: // Not valid format
+		if _, err = b.cli.SendText(event.RoomID, InvalidReportCommand); err != nil {
+			return errors.Wrap(err, "error sending invalid report command message")
+		}
+
+		return nil
+	}
+
+	shifts, err := b.shiftRepo.Report(event.RoomID, from, to)
 	if err != nil {
 		return errors.Wrap(err, "error in getting shifts from the db")
 	}
 
-	shiftsRep := make([]ShiftReportTemplate, 0, len(shifts))
-	results := make(map[string]ShiftReportTemplate)
+	shiftsRep := make([]ShiftReportItemTemplate, 0, len(shifts))
+	results := make(map[string]ShiftReportItemTemplate)
 
 	for _, shift := range shifts {
-		var temp ShiftReportTemplate
+		var temp ShiftReportItemTemplate
 
 		var ok bool
 
 		if temp, ok = results[shift.Holders]; !ok {
-			temp = ShiftReportTemplate{
+			temp = ShiftReportItemTemplate{
 				HolderID:   shift.Holders,
 				WorkingDay: 0,
 				Holiday:    0,
 			}
 		}
 
-		wd, hd := dateDiff(shift.StartTime, shift.EndTime)
+		if shift.EndTime == nil {
+			shift.EndTime = &to
+		}
+
+		if from.After(shift.StartTime) {
+			shift.StartTime = from
+		}
+
+		if to.Before(*shift.EndTime) {
+			shift.EndTime = &to
+		}
+
+		wd, hd := dateDiff(shift.StartTime, *shift.EndTime)
 		temp.WorkingDay += wd
 		temp.Holiday += hd
 		results[shift.Holders] = temp
@@ -424,16 +488,22 @@ func (b *Bot) report(event *gomatrix.Event) error {
 			return errors.Wrap(err, "error getting the display name of the event sender")
 		}
 
-		shiftsRep = append(shiftsRep, ShiftReportTemplate{
+		shiftsRep = append(shiftsRep, ShiftReportItemTemplate{
 			HolderID:   b.mentionedText(result.HolderID, displayName.DisplayName),
 			WorkingDay: result.WorkingDay,
 			Holiday:    result.Holiday,
 		})
 	}
 
+	tmp := ShiftReportTemplate{
+		Items: shiftsRep,
+		From:  from.Format(time.Stamp),
+		To:    to.Format(time.Stamp),
+	}
+
 	var buf bytes.Buffer
 
-	err = reportTemplate.Execute(&buf, shiftsRep)
+	err = reportTemplate.Execute(&buf, tmp)
 	if err != nil {
 		return errors.Wrap(err, "error in executing the template with parameter")
 	}
