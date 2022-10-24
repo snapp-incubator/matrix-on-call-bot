@@ -11,7 +11,6 @@ import (
 
 	"github.com/matrix-org/gomatrix"
 	"github.com/pkg/errors"
-
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/model"
 )
 
@@ -53,6 +52,11 @@ var (
 	// @ahmad.anvari:snapp.cab).
 	Regexp = regexp.MustCompile(`<a href="https://matrix.to/#/(.*?)">(.*?)</a>`)
 )
+
+type Command interface {
+	Match(message string) bool
+	Handle(event *gomatrix.Event) error
+}
 
 //nolint:cyclop
 func (b *Bot) Handle(event *gomatrix.Event) error {
