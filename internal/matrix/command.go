@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -39,16 +38,11 @@ var (
 	ErrInvalidCommand = errors.New("invalid command")
 	ErrUnknownCommand = errors.New("unknown command")
 	ErrInvalidBody    = errors.New("invalid body")
-	ErrInvalidType    = errors.New("invalid type")
-
-	// Regexp is a compiled regular expression that can extract data in a message containing people mentioning (like:
-	// @ahmad.anvari:snapp.cab).
-	Regexp = regexp.MustCompile(`<a href="https://matrix.to/#/(.*?)">(.*?)</a>`)
 )
 
 type Command interface {
 	Match(message string) bool
-	Handle(event *gomatrix.Event) error
+	Handle(event *gomatrix.Event, messageParts []string) error
 }
 
 //nolint:cyclop

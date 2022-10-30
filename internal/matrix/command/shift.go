@@ -9,7 +9,6 @@ import (
 
 	"github.com/matrix-org/gomatrix"
 	"github.com/pkg/errors"
-	"github.com/snapp-incubator/matrix-on-call-bot/internal/matrix"
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/matrix/message"
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/model"
 )
@@ -21,10 +20,14 @@ const (
 	// !listshifts.
 	startShiftParseRegexString = "^!startshift|^!endshift|^!listshifts"
 
-	minCreateShiftLength int = 2
+	minCreateShiftLength int = 1
 
 	minEndShiftLength int = 2
 )
+
+// Regexp is a compiled regular expression that can extract data in a message containing people mentioning (like:
+// @ahmad.anvari:snapp.cab).
+var mentionRegex = regexp.MustCompile(`<a href="https://matrix.to/#/(.*?)">(.*?)</a>`)
 
 type Shift struct {
 	parseRegex *regexp.Regexp
@@ -46,19 +49,12 @@ func (s *Shift) Match(message string) bool {
 	return s.parseRegex.MatchString(message)
 }
 
-func (s *Shift) Handle(event *gomatrix.Event) error {
-	raw, ok := event.Content["body"].(string)
-	if !ok {
-		return matrix.ErrInvalidBody
-	}
-
-	parts := strings.Split(raw, " ")
-
-	switch parts[0] {
+func (s *Shift) Handle(event *gomatrix.Event, messageParts []string) error {
+	switch messageParts[0] {
 	case "!startshift":
-		return s.startShift(event, parts)
+		return s.startShift(event, messageParts)
 	case "!endshift":
-		return s.endShift(event, parts)
+		return s.endShift(event, messageParts)
 	case "!listshifts":
 		return s.listShifts(event)
 	}
@@ -66,9 +62,45 @@ func (s *Shift) Handle(event *gomatrix.Event) error {
 	return nil
 }
 
+//nolint:funlen,cyclop
 func (s *Shift) startShift(event *gomatrix.Event, parts []string) error {
 	if len(parts) < minCreateShiftLength {
-		return matrix.ErrInvalidCommand
+		return ErrInvalidCommand
+	}
+
+	formattedBody, found := event.Content["formatted_body"]
+	if !found && len(parts) > 1 {
+		if _, err := s.client.SendText(event.RoomID, message.InvalidShiftStart); err != nil {
+			return errors.Wrap(err, "error sending invalid shift start")
+		}
+	}
+
+	mxids := make([]string, 0)
+	names := make([]string, 0)
+	mentions := make([]string, 0)
+
+	if len(parts) == 1 {
+		mxids = append(mxids, event.Sender)
+
+		displayName, err := s.client.GetDisplayName(event.Sender)
+		if err != nil {
+			return errors.Wrap(err, "error getting the display name of the event sender")
+		}
+
+		mentions = append(mentions, message.MentionedText(event.Sender, displayName.DisplayName))
+		names = append(names, displayName.DisplayName)
+	} else {
+		formattedBodyStr, ok := formattedBody.(string)
+		if !ok {
+			return errors.Wrap(ErrInvalidType, "error getting the display name of the event sender")
+		}
+
+		items := mentionRegex.FindAllStringSubmatch(formattedBodyStr, -1)
+		for _, parts := range items {
+			mentions = append(mentions, parts[0])
+			mxids = append(mxids, parts[1])
+			names = append(names, parts[2])
+		}
 	}
 
 	active, err := s.shiftRepo.Active(event.RoomID)
@@ -76,8 +108,10 @@ func (s *Shift) startShift(event *gomatrix.Event, parts []string) error {
 		return errors.Wrap(err, "error getting active shifts")
 	}
 
+	//nolint:godox
+	// TODO: Check weather this condition should be checked or not
 	if len(active) > 0 {
-		if _, err = s.client.SendText(event.RoomID, message.ActiveShiftOngoing); err != nil {
+		if _, err := s.client.SendText(event.RoomID, message.ActiveShiftOngoing); err != nil {
 			return errors.Wrap(err, "error sending active shift message")
 		}
 
@@ -86,18 +120,25 @@ func (s *Shift) startShift(event *gomatrix.Event, parts []string) error {
 
 	now := time.Now()
 
-	if err = s.shiftRepo.Create(&model.Shift{
-		RoomID:    event.RoomID,
-		Sender:    event.Sender,
-		Holders:   parts[1],
-		StartTime: now,
-		EndTime:   nil,
-	}); err != nil {
-		return errors.Wrap(err, "error saving shift")
+	for _, mxid := range mxids {
+		//nolint:godox
+		// TODO: Create a bulk Create method
+		if err := s.shiftRepo.Create(&model.Shift{
+			RoomID:    event.RoomID,
+			Sender:    event.Sender,
+			Holders:   mxid,
+			StartTime: now,
+			EndTime:   nil,
+		}); err != nil {
+			return errors.Wrap(err, "error saving shift")
+		}
 	}
 
-	_, err = s.client.SendFormattedText(event.RoomID, "",
-		fmt.Sprintf(message.ShiftStarted, now.Local().Format(time.RFC850), message.FormatCommaSeperatedList(parts[1])))
+	formattedTime := now.Local().Format(time.RFC850)
+
+	_, err = s.client.SendFormattedText(event.RoomID, fmt.Sprintf(message.ShiftStarted,
+		strings.Join(names, " "), formattedTime),
+		fmt.Sprintf(message.ShiftStarted, strings.Join(mentions, " "), formattedTime))
 	if err != nil {
 		return errors.Wrap(err, "error sending shift created message")
 	}
@@ -107,7 +148,7 @@ func (s *Shift) startShift(event *gomatrix.Event, parts []string) error {
 
 func (s *Shift) endShift(event *gomatrix.Event, parts []string) error {
 	if len(parts) < minEndShiftLength {
-		return matrix.ErrInvalidCommand
+		return ErrInvalidCommand
 	}
 
 	shiftID, err := strconv.Atoi(parts[1])
@@ -117,14 +158,16 @@ func (s *Shift) endShift(event *gomatrix.Event, parts []string) error {
 
 	now := time.Now()
 
-	if err = s.shiftRepo.Update(&model.Shift{
+	if err := s.shiftRepo.Update(&model.Shift{
 		ID:      shiftID,
 		EndTime: &now,
 	}); err != nil {
 		return errors.Wrap(err, "error updating shift")
 	}
 
-	if _, err = s.client.SendFormattedText(event.RoomID, "", fmt.Sprintf(message.ShiftEnd, shiftID)); err != nil {
+	_, err = s.client.SendFormattedText(event.RoomID,
+		fmt.Sprintf(message.ShiftEnd, shiftID), fmt.Sprintf(message.ShiftEndFormatted, shiftID))
+	if err != nil {
 		return errors.Wrap(err, "error sending shift end message")
 	}
 
@@ -137,7 +180,7 @@ func (s *Shift) listShifts(event *gomatrix.Event) error {
 		return errors.Wrap(err, "error getting shifts")
 	}
 
-	msg := new(strings.Builder)
+	msg := ""
 
 	for _, item := range list {
 		end := "-"
@@ -148,13 +191,19 @@ func (s *Shift) listShifts(event *gomatrix.Event) error {
 			emoji = "⚪️"
 		}
 
-		msg.WriteString(fmt.Sprintf(message.ShiftItem, emoji,
-			item.StartTime.Local().Format(time.RFC850), end, message.FormatCommaSeperatedList(item.Holders), item.ID))
+		displayName, err := s.client.GetDisplayName(item.Holders)
+		if err != nil {
+			return errors.Wrap(err, "error getting the display name of the event sender")
+		}
+
+		msg += fmt.Sprintf(message.ShiftItem, emoji,
+			item.StartTime.Local().Format(time.RFC850),
+			end, message.MentionedText(item.Holders, displayName.DisplayName), item.ID)
 	}
 
-	response := fmt.Sprintf(message.ShiftList, msg.String())
+	msg = fmt.Sprintf(message.ShiftList, msg)
 
-	if _, err = s.client.SendFormattedText(event.RoomID, "", response); err != nil {
+	if _, err = s.client.SendFormattedText(event.RoomID, "", msg); err != nil {
 		return errors.Wrap(err, "error sending shifts list")
 	}
 

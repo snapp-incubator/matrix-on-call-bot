@@ -8,6 +8,7 @@ import (
 	"github.com/matrix-org/gomatrix"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/snapp-incubator/matrix-on-call-bot/internal/matrix/command"
 	"github.com/snapp-incubator/matrix-on-call-bot/internal/model"
 )
 
@@ -107,13 +108,13 @@ func (b *Bot) RegisterListeners() error {
 func (b *Bot) matchAndHandleEvent(event *gomatrix.Event) error {
 	raw, ok := event.Content["body"].(string)
 	if !ok {
-		return ErrInvalidBody
+		return command.ErrInvalidBody
 	}
 
 	parts := strings.Split(raw, " ")
 
 	if len(parts) < minCommandLength {
-		return ErrInvalidCommand
+		return command.ErrInvalidCommand
 	}
 
 	if parts[0][0] != '!' {
@@ -123,7 +124,7 @@ func (b *Bot) matchAndHandleEvent(event *gomatrix.Event) error {
 	for _, cmd := range b.commands {
 		if cmd.Match(parts[0]) {
 			// each command message can be handled by only one command handler.
-			err := cmd.Handle(event)
+			err := cmd.Handle(event, parts)
 			if err != nil {
 				return fmt.Errorf("command type %t returned error: %w", cmd, err)
 			}
@@ -132,7 +133,7 @@ func (b *Bot) matchAndHandleEvent(event *gomatrix.Event) error {
 		}
 	}
 
-	return ErrUnknownCommand
+	return command.ErrUnknownCommand
 }
 
 func (b *Bot) Run() {
