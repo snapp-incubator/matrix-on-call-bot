@@ -61,7 +61,7 @@ func Init() Config {
 }
 
 // read initializes a config struct using default, file, and environment variables.
-func read(app, defaultFilename, fileExtension string, cfg interface{}, defaultConfig string, envPrefix string) interface{} {
+func read(app, defaultFilename, fileExt string, cfg interface{}, defaultConfig string, envPrefix string) interface{} {
 	//nolint:varnamelen
 	v := viper.New()
 	v.SetConfigType("yaml")
@@ -71,7 +71,7 @@ func read(app, defaultFilename, fileExtension string, cfg interface{}, defaultCo
 	}
 
 	v.SetConfigName(defaultFilename) // name of config defaultFilename (without extension)
-	v.SetConfigType(fileExtension)   // REQUIRED because of this bug: https://github.com/spf13/viper/issues/390
+	v.SetConfigType(fileExt)         // REQUIRED because of this bug: https://github.com/spf13/viper/issues/390
 	v.SetEnvPrefix(envPrefix)
 	v.AddConfigPath(fmt.Sprintf("/etc/%s/", app))
 	v.AddConfigPath(fmt.Sprintf("$HOME/.%s", app))
