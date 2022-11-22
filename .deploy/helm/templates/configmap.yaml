@@ -17,4 +17,4 @@ data:
       display-name: {{ .Values.matrix.displayName | quote }}
       token: {{ .Values.matrix.token | quote }}
       url: {{ .Values.matrix.url | quote }}
-      userID: {{ .Values.matrix.userID }}
+      userID: {{ .Values.matrix.userID | quote }}
