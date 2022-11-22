@@ -35,20 +35,17 @@ spec:
             - "/usr/local/bin/matrix-on-call-bot"
           args:
             - "server"
-          ports:
-            - name: http
-              containerPort: 80
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/matrix-on-call-bot/config.yaml
+              subPath: config.yaml
+              readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "matrix-on-call-bot.fullname" . }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
