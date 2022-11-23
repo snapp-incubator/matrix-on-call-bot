@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	app       = "matrix-on-call-bot"
-	cfgFile   = "config.yaml"
-	cfgPrefix = "matrixoncallbot"
+	app                = "matrix-on-call-bot"
+	cfgDefaultFileName = "config"
+	cfgFileExtension   = "yaml"
+	cfgEnvPrefix       = "matrixoncallbot"
 )
 
 type (
@@ -50,7 +51,7 @@ func (c Config) Validate() error {
 func Init() Config {
 	var cfg Config
 
-	read(app, cfgFile, &cfg, defaultConfig, cfgPrefix)
+	read(app, cfgDefaultFileName, cfgFileExtension, &cfg, defaultConfig, cfgEnvPrefix)
 
 	if err := cfg.Validate(); err != nil {
 		logrus.Fatalf("failed to validate configurations: %s", err.Error())
@@ -60,7 +61,7 @@ func Init() Config {
 }
 
 // read initializes a config struct using default, file, and environment variables.
-func read(app string, file string, cfg interface{}, defaultConfig string, prefix string) interface{} {
+func read(app, defaultFilename, fileExt string, cfg interface{}, defaultConfig string, envPrefix string) interface{} {
 	//nolint:varnamelen
 	v := viper.New()
 	v.SetConfigType("yaml")
@@ -69,8 +70,9 @@ func read(app string, file string, cfg interface{}, defaultConfig string, prefix
 		logrus.Fatalf("error loading default configs: %s", err.Error())
 	}
 
-	v.SetConfigFile(file)
-	v.SetEnvPrefix(prefix)
+	v.SetConfigName(defaultFilename) // name of config defaultFilename (without extension)
+	v.SetConfigType(fileExt)         // REQUIRED because of this bug: https://github.com/spf13/viper/issues/390
+	v.SetEnvPrefix(envPrefix)
 	v.AddConfigPath(fmt.Sprintf("/etc/%s/", app))
 	v.AddConfigPath(fmt.Sprintf("$HOME/.%s", app))
 	v.AddConfigPath(".")
@@ -81,9 +83,9 @@ func read(app string, file string, cfg interface{}, defaultConfig string, prefix
 	switch err := v.MergeInConfig(); err.(type) {
 	case nil:
 	case *os.PathError:
-		logrus.Warn("no config file found. Using defaults and environment variables")
+		logrus.Warn("no config defaultFilename found. Using defaults and environment variables")
 	default:
-		logrus.Warnf("failed to load config file: %s", err.Error())
+		logrus.Warnf("failed to load config defaultFilename: %s", err.Error())
 	}
 
 	if err := v.UnmarshalExact(&cfg); err != nil {

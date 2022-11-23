@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "matrix-on-call-bot.fullname" . }}
+  labels:
+    {{- include "matrix-on-call-bot.labels" . | nindent 4 }}
+data:
+  config.yaml: |-
+    database:
+      conn-str: {{ .Values.database.connStr | quote }}
+      driver: {{ .Values.database.driver | quote }}
+      options:
+        connection-lifetime: {{ .Values.database.options.connectionLifetime | quote }}
+        max-idle-connections: {{ .Values.database.options.maxIdleConnections }}
+        max-open-connections: {{ .Values.database.options.maxOpenConnections }}
+    matrix:
+      display-name: {{ .Values.matrix.displayName | quote }}
+      token: {{ .Values.matrix.token | quote }}
+      url: {{ .Values.matrix.url | quote }}
+      userID: {{ .Values.matrix.userID | quote }}
