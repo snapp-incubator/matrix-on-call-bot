@@ -42,6 +42,7 @@ spec:
               readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env: {{- toYaml .Values.envs | nindent 12 }}
       volumes:
         - name: config
           configMap:
