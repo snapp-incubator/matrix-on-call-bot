@@ -56,14 +56,22 @@ tolerations: []
 affinity: {}
 
 database:
-  connStr: on-call:secret@tcp(localhost:3306)/on-call?readTimeout=3s&timeout=30s&parseTime=True
   driver: mysql
-  options:
-    connectionLifetime: 10m
-    maxIdleConnections: 5
-    maxOpenConnections: 10
+  host: "localhost"
+  port: 3306
+  dbName: "on-call"
+  username: "on-call"
+  password: "secret"
+  timeout: "30s"
+  readTimeout: "3s"
+  writeTimeout: "1s"
+  connectionLifetime: 10m
+  maxIdleConnections: 5
+  maxOpenConnections: 10
 matrix:
   displayName: user
   token: secret
   url: https://example.com
   userID: '@some_bot:example.com'
+
+envs: {}

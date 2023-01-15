@@ -7,12 +7,19 @@ metadata:
 data:
   config.yaml: |-
     database:
-      conn-str: {{ .Values.database.connStr | quote }}
       driver: {{ .Values.database.driver | quote }}
-      options:
-        connection-lifetime: {{ .Values.database.options.connectionLifetime | quote }}
-        max-idle-connections: {{ .Values.database.options.maxIdleConnections }}
-        max-open-connections: {{ .Values.database.options.maxOpenConnections }}
+      host: {{ .Values.database.host | quote }}
+      port: {{ .Values.database.port }}
+      db_name: {{ .Values.database.dbName | quote }}
+      username: {{ .Values.database.username | quote }}
+      password: {{ .Values.database.password | quote }}
+      timeout: {{ .Values.database.timeout | quote }}
+      read_timeout: {{ .Values.database.readTimeout | quote }}
+      write_timeout: {{ .Values.database.writeTimeout | quote }}
+      connection_lifetime: {{ .Values.database.connectionLifetime | quote }}
+      max_open_connections: {{ .Values.database.maxIdleConnections }}
+      max_idle_connections: {{ .Values.database.maxOpenConnections }}
+
     matrix:
       display-name: {{ .Values.matrix.displayName | quote }}
       token: {{ .Values.matrix.token | quote }}

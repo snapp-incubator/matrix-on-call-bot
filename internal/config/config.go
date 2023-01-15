@@ -55,7 +55,7 @@ func (c Config) Validate() error {
 	return errors.Wrap(validator.New().Struct(c), "config validation failed")
 }
 
-// MySQLConnectionURI returns URI for connecting to a MySQL liked database
+// MySQLConnectionURI returns URI for connecting to a MySQL liked database.
 func (d Database) MySQLConnectionURI() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=%s&readTimeout=%s&writeTimeout=%s&parseTime=True",
 		d.Username,
