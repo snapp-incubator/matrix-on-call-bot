@@ -17,12 +17,7 @@ import (
 const sigChanSize = 2
 
 func main(cfg config.Config) {
-	oncallDB := database.WithRetry(
-		database.Create,
-		cfg.Database.Driver,
-		cfg.Database.ConnStr,
-		cfg.Database.Options,
-	)
+	oncallDB := database.WithRetry(database.Create, cfg.Database)
 
 	roomRepo := &model.SQLRoomRepo{DB: oncallDB}
 	shiftRepo := &model.SQLShiftRepo{DB: oncallDB}

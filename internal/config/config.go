@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/go-playground/validator/v10"
-
-	"github.com/snapp-incubator/matrix-on-call-bot/internal/database"
 )
 
 const (
@@ -36,15 +35,37 @@ type (
 	}
 
 	Database struct {
-		Driver  string           `mapstructure:"driver"`
-		ConnStr string           `mapstructure:"conn-str"`
-		Options database.Options `mapstructure:"options"`
+		Driver             string        `mapstructure:"driver"`
+		Host               string        `mapstructure:"host"`
+		Port               int           `mapstructure:"port"`
+		DBName             string        `mapstructure:"db_name"`
+		Username           string        `mapstructure:"username"`
+		Password           string        `mapstructure:"password"`
+		Timeout            time.Duration `mapstructure:"timeout"`
+		ReadTimeout        time.Duration `mapstructure:"read_timeout"`
+		WriteTimeout       time.Duration `mapstructure:"write_timeout"`
+		ConnectionLifetime time.Duration `mapstructure:"connection_lifetime"`
+		MaxOpenConnections int           `mapstructure:"max_open_connections"`
+		MaxIdleConnections int           `mapstructure:"max_idle_connections"`
 	}
 )
 
 // Validate validates Config struct.
 func (c Config) Validate() error {
 	return errors.Wrap(validator.New().Struct(c), "config validation failed")
+}
+
+// MySQLConnectionURI returns URI for connecting to a MySQL liked database
+func (d Database) MySQLConnectionURI() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=%s&readTimeout=%s&writeTimeout=%s&parseTime=True",
+		d.Username,
+		d.Password,
+		d.Host,
+		d.Port,
+		d.DBName,
+		d.Timeout.String(),
+		d.ReadTimeout.String(),
+		d.WriteTimeout.String())
 }
 
 // Init reads and validates application configs.
