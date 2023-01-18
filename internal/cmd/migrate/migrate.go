@@ -21,12 +21,7 @@ const (
 var ErrFlags = errors.New("error parsing flags")
 
 func main(path string, cfg config.Database) error {
-	oncallDB := database.WithRetry(
-		database.Create,
-		cfg.Driver,
-		cfg.ConnStr,
-		cfg.Options,
-	)
+	oncallDB := database.WithRetry(database.Create, cfg)
 
 	sqlDB, err := oncallDB.DB()
 	if err != nil {

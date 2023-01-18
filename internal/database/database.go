@@ -8,6 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	"github.com/snapp-incubator/matrix-on-call-bot/internal/config"
 )
 
 const (
@@ -15,20 +17,13 @@ const (
 	maxAttempts         = 60
 )
 
-// Options represents a struct for creating database connection configurations.
-type Options struct {
-	ConnectionLifetime time.Duration `mapstructure:"connection-lifetime"`
-	MaxOpenConnections int           `mapstructure:"max-open-connections"`
-	MaxIdleConnections int           `mapstructure:"max-idle-connections"`
-}
-
 // Create creates a database connection.
-func Create(driver string, connStr string, options Options) (*gorm.DB, error) {
+func Create(cfg config.Database) (*gorm.DB, error) {
 	var dialect gorm.Dialector
 
-	switch strings.ToLower(driver) {
+	switch strings.ToLower(cfg.Driver) {
 	case "mysql":
-		dialect = mysql.Open(connStr)
+		dialect = mysql.Open(cfg.MySQLConnectionURI())
 	//nolint:godox
 	// TODO: As our migrations are not Postgresql compatible, we don't support postgres for now.
 	// case "postgres", "postgresql":
@@ -47,20 +42,20 @@ func Create(driver string, connStr string, options Options) (*gorm.DB, error) {
 		return nil, errors.Wrap(err, "error in accessing sql DB instance")
 	}
 
-	sqlDB.SetConnMaxLifetime(options.ConnectionLifetime)
-	sqlDB.SetMaxOpenConns(options.MaxOpenConnections)
-	sqlDB.SetMaxIdleConns(options.MaxIdleConnections)
+	sqlDB.SetConnMaxLifetime(cfg.ConnectionLifetime)
+	sqlDB.SetMaxOpenConns(cfg.MaxOpenConnections)
+	sqlDB.SetMaxIdleConns(cfg.MaxIdleConnections)
 
 	return database, nil
 }
 
 // WithRetry provides functionality for having retry for connecting to database.
 func WithRetry(
-	fn func(driver string, connStr string, options Options,
-	) (*gorm.DB, error), driver string, connStr string, options Options,
+	fn func(cfg config.Database) (*gorm.DB, error),
+	cfg config.Database,
 ) *gorm.DB {
 	for i := 0; i < maxAttempts; i++ {
-		db, err := fn(driver, connStr, options)
+		db, err := fn(cfg)
 		if err == nil {
 			return db
 		}
