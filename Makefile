@@ -32,7 +32,7 @@ format: check-formatter
 	find . -type f -name "*.go" -not -path "./vendor/*" | xargs -n 1 -I R gofumpt -w R
 
 check-linter:
-	which golangci-lint || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
+	which golangci-lint || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 
 lint: check-linter
 	golangci-lint run ./...

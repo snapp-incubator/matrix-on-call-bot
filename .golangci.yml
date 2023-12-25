@@ -5,3 +5,6 @@ linters:
     - exhaustivestruct
     - exhaustruct
     - nolintlint
+    - depguard
+    - gosmopolitan
+    - goconst
